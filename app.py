@@ -4,12 +4,25 @@ import requests
 from flask_caching import Cache
 from flask_cors import CORS
 import logging
+from sentence_transformers import SentenceTransformer
+import chromadb
+from chromadb.config import Settings
+import json
 
 app = Flask(__name__)
 CORS(app) 
 
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300}) 
 logging.basicConfig(level=logging.DEBUG)
+# Initializing Embeddings model
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# Initialize the ChromaDB client with updated settings
+settings = Settings(persist_directory="chroma_data")
+
+client = chromadb.Client(settings)
+
+collection = client.get_or_create_collection("stock_data")
 
 # ------------- Logging ------------------ 
 
@@ -28,6 +41,10 @@ def log_response_info(response):
     app.logger.debug('Response Headers: %s', response.headers)
     app.logger.debug('Response Body: %s', response.get_data(as_text=True))
     return response
+
+
+def generate_embedding(text):
+    return embedding_model.encode([text])[0]
 
 
 API_KEY = 'PM36VUI92EF4GOPD'  
@@ -53,6 +70,18 @@ def get_stock_quote():
         return jsonify({'error': 'Failed to fetch data from Alpha Vantage API.'}), 500
 
     data = response.json()
+
+    # Generate embedding
+    data_text = json.dumps(data)  # Convert data to string
+    embedding = generate_embedding(data_text)
+
+    # Store in Chroma
+    collection.add(
+        embeddings=[embedding],
+        documents=[data_text],
+        metadatas=[{'symbol': symbol}],
+        ids=[symbol]  # Use the stock symbol as the ID
+    )
 
     if 'Error Message' in data or 'Note' in data:
         return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -89,6 +118,18 @@ def get_stock_daily():
 
     data = response.json()
 
+    # Generate embedding
+    data_text = json.dumps(data)
+    embedding = generate_embedding(data_text)
+
+    # Store in Chroma
+    collection.add(
+        embeddings=[embedding],
+        documents=[data_text],
+        metadatas=[{'symbol': symbol, 'outputsize': outputsize}],
+        ids=[f"{symbol}_daily_{outputsize}"]
+    )
+
     # Check for API errors in the response
     if 'Error Message' in data or 'Note' in data:
         return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -122,6 +163,25 @@ def get_top_movers():
         top_gainers = data['top_gainers'][:10]
         top_losers = data['top_losers'][:10]
         most_active = data['most_actively_traded'][:10]
+
+        combined_data = {
+        'top_gainers': top_gainers,
+        'top_losers': top_losers,
+        'most_active': most_active
+        }
+
+        # Generate embedding
+        data_text = json.dumps(combined_data)
+        embedding = generate_embedding(data_text)
+
+        # Store in Chroma
+        collection.add(
+            embeddings=[embedding],
+            documents=[data_text],
+            metadatas=[{'type': 'top_movers'}],
+            ids=['top_movers']
+        )
+
         return jsonify({
             'top_gainers': top_gainers,
             'top_losers': top_losers,
@@ -129,6 +189,26 @@ def get_top_movers():
         })
     else:
         return jsonify({'error': 'No data found for top gainers, losers, or most active.'}), 400
+
+@app.route('/query', methods=['POST'])
+def query_data():
+    data = request.get_json()
+    query_text = data.get('query')
+
+    if not query_text:
+        return jsonify({'error': 'Please provide a query in the request body.'}), 400
+
+    # Generate embedding for the query
+    query_embedding = generate_embedding(query_text)
+
+    # Query the vector database
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=5,  # Number of results to return
+        include=['documents', 'metadatas']  # Include documents and metadata in the response
+    )
+
+    return jsonify(results)
 
 
 
