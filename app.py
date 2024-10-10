@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 import requests
 from flask_caching import Cache
 from flask_cors import CORS
@@ -8,9 +8,11 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
 import json
+import os
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
+app.secret_key = os.urandom(24)
 
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300}) 
 logging.basicConfig(level=logging.DEBUG)
@@ -23,6 +25,23 @@ settings = Settings(persist_directory="chroma_data")
 client = chromadb.Client(settings)
 
 collection = client.get_or_create_collection("stock_data")
+
+# Dummy user data (for testing purposes)
+dummy_users = {
+    'admin@gmail.com': {
+        'name': 'Admin',
+        'password': 'Admin@1234'  # This should meet your password criteria
+    }
+}
+
+# ------------ Hashing Passwords ------------
+# from werkzeug.security import generate_password_hash, check_password_hash
+
+# # Storing a hashed password
+# hashed_password = generate_password_hash(password)
+
+# # Verifying a password
+# check_password_hash(hashed_password, password)
 
 # ------------- Logging ------------------ 
 
@@ -47,7 +66,47 @@ def generate_embedding(text):
     return embedding_model.encode([text])[0]
 
 
-API_KEY = 'PM36VUI92EF4GOPD'  
+API_KEY = '9ZQUXAH9JOQRSQDV'
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    email = data.get('email')
+    name = data.get('name')
+    password = data.get('password')
+
+    if not email or not name or not password:
+        return jsonify({'message': 'All fields are required.'}), 400
+
+    if email in dummy_users:
+        return jsonify({'message': 'User already exists.'}), 400
+
+    # For the purpose of this example, we're just adding the user to the dummy_users dictionary
+    dummy_users[email] = {
+        'name': name,
+        'password': password  # In a real app, hash the password before storing
+    }
+
+    return jsonify({'message': 'Signup successful.'}), 200
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    user = dummy_users.get(email)
+    if user and user['password'] == password:
+        # Simulate setting a session
+        session['user'] = {'email': email, 'name': user['name']}
+        return jsonify({'message': 'Login successful.'}), 200
+    else:
+        return jsonify({'message': 'Invalid email or password.'}), 401
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.pop('user', None)
+    return jsonify({'message': 'Logged out successfully.'}), 200
 
 @cache.cached()
 @app.route('/stocks/quote', methods=['GET'])
