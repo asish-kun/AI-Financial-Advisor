@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 settings = {
-    'host': os.getenv('ACCOUNT_HOST'),
-    'master_key': os.getenv('ACCOUNT_KEY'),
-    'database_id': os.getenv('COSMOS_DATABASE'),
-    'container_id': os.getenv('COSMOS_CONTAINER'),
+    'host': os.environ.get('ACCOUNT_HOST', 'https://fin-data-db.documents.azure.com:443/'),
+    'master_key': os.environ.get('ACCOUNT_KEY', 'arneIEEzvee0hQFxog0li1WSGXpbZRK9axK4c0V2Alkwjr93DC7ZWU1KGH0WpWfXa8Rko9rSwncvACDbNdxbyQ=='),
+    'database_id': os.environ.get('COSMOS_DATABASE', 'ToDoList'),
+    'container_id': os.environ.get('COSMOS_CONTAINER', 'Items'),
 }
