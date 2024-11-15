@@ -42,5 +42,21 @@ jobs:
           echo "COSMOS_DATABASE=${{ secrets.COSMOS_DATABASE }}" >> $GITHUB_ENV
           echo "COSMOS_CONTAINER=${{ secrets.COSMOS_CONTAINER }}" >> $GITHUB_ENV
 
+   # Add a status-check job that depends on the build job
+  status-check:
+    runs-on: ubuntu-latest
+    needs: build  # This makes sure it only runs if build completes
+
+    steps:
+      - name: Check CI Status
+        if: ${{ needs.build.result == 'success' }}
+        run: echo "✅ All tests passed. CI pipeline successful."
+
+      - name: Fail CI Status
+        if: ${{ needs.build.result != 'success' }}
+        run: |
+          echo "❌ Some tests failed in the CI pipeline."
+          exit 1  
+
       # - name: Run tests
       #   run: pytest --maxfail=5 --disable-warnings 
