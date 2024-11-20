@@ -10,3 +10,5 @@ settings = {
     'database_id': os.environ.get('COSMOS_DATABASE'),
     'container_id': os.environ.get('COSMOS_CONTAINER'),
 }
+
+API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY')
