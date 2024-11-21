@@ -106,6 +106,7 @@ def signup():
     password = data.get('password')
     gender = data.get('gender')
     age = data.get('age')
+    investment_amount = data.get('investmentAmount')
     investment_goal = data.get('investmentGoal')
     risk_appetite = data.get('riskAppetite')
     time_horizon = data.get('timeHorizon')
@@ -131,6 +132,7 @@ def signup():
         "password": hashed_password.decode('utf-8'),
         "gender": gender,
         "age": age,
+        "investmentAmount": investment_amount,
         "investmentGoal": investment_goal,
         "riskAppetite": risk_appetite,
         "timeHorizon": time_horizon
