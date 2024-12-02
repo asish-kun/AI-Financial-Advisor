@@ -112,7 +112,9 @@ def create_app():
         # Check if user already exists
         try:
             existing_user = list(container.query_items(
-                query=f"SELECT * FROM c WHERE c.email = '{email}'", enable_cross_partition_query=True
+                query="SELECT * FROM c WHERE c.email = @email",
+                parameters=[{"name": "@email", "value": email}],
+                enable_cross_partition_query=True
             ))
             if existing_user:
                 return jsonify({"message": "Email already exists"}), 400
