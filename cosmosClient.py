@@ -1,15 +1,17 @@
 # cosmos_client.py
 from azure.cosmos import CosmosClient, exceptions
+from config import settings
 
-COSMOS_DB_ENDPOINT = "https://fin-data-db.documents.azure.com:443/"
-COSMOS_DB_KEY = "arneIEEzvee0hQFxog0li1WSGXpbZRK9axK4c0V2Alkwjr93DC7ZWU1KGH0WpWfXa8Rko9rSwncvACDbNdxbyQ"
-DATABASE_NAME = "ToDoList"
-CONTAINER_NAME = "Items"
+# Azure Cosmos DB settings
+HOST = settings['host']
+MASTER_KEY = settings['master_key']
+DATABASE_ID = settings['database_id']
+CONTAINER_ID = settings['container_id']
 
-client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
-database = client.create_database_if_not_exists(DATABASE_NAME)
+client = CosmosClient(HOST, MASTER_KEY)
+database = client.create_database_if_not_exists(DATABASE_ID)
 container = database.create_container_if_not_exists(
-    id=CONTAINER_NAME,
+    id=CONTAINER_ID,
     partition_key="/id",  # Customize the partition key if needed
 )
 

@@ -3,7 +3,7 @@ import requests
 from flask_caching import Cache
 from flask_cors import CORS
 import logging
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 import chromadb
 from chromadb.config import Settings
@@ -33,7 +33,7 @@ jwt = JWTManager(app)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300}) 
 logging.basicConfig(level=logging.DEBUG)
 # Initializing Embeddings model
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+# embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Initialize the ChromaDB client with updated settings
 chroma_settings = Settings(persist_directory="chroma_data")
@@ -123,9 +123,10 @@ def signup():
     # Hash the password
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-    # Create new user document
+    # Create new user document with partitionKey
     new_user = {
         "id": email,  # Using email as the unique identifier
+        "partitionKey": email,  # Setting partitionKey to email
         "username": username,
         "email": email,
         "password": hashed_password.decode('utf-8'),
@@ -179,8 +180,8 @@ def login():
     return jsonify(response_data), 200
 
 
-def generate_embedding(text):
-    return embedding_model.encode([text])[0].tolist()
+# def generate_embedding(text):
+#     return embedding_model.encode([text])[0].tolist()
 
 
 API_KEY = '9ZQUXAH9JOQRSQDV'
@@ -221,15 +222,15 @@ def add_stock_to_portfolio(email):
         return jsonify({"message": "No stock data provided"}), 400
 
     try:
-        # Retrieve user by email
+        # Retrieve user by id (which is the email)
         user = list(container.query_items(
-            query=f"SELECT * FROM c WHERE c.email = '{email}'",
+            query=f"SELECT * FROM c WHERE c.id = '{email}'",
             enable_cross_partition_query=True
         ))
         if not user:
             return jsonify({"message": "User not found"}), 404
 
-        user = user[0]  # Assuming email is unique
+        user = user[0]  # Assuming id (email) is unique
 
         # Update user's portfolio
         portfolio = user.get('portfolio', [])
@@ -243,6 +244,7 @@ def add_stock_to_portfolio(email):
 
     except exceptions.CosmosHttpResponseError as e:
         return jsonify({"message": "Error updating portfolio", "error": str(e)}), 500
+
 
 @app.route('/delete-portfolio/<email>', methods=['DELETE'])
 def delete_portfolio(email):
@@ -293,11 +295,11 @@ def get_stock_quote():
 
     # Generate embedding
     data_text = json.dumps(data)  # Convert data to string
-    embedding = generate_embedding(data_text)
+    # embedding = generate_embedding(data_text)
 
     # Store in Chroma
     collection.add(
-        embeddings=[embedding],
+        # embeddings=[embedding],
         documents=[data_text],
         metadatas=[{'symbol': symbol}],
         ids=[symbol]  # Use the stock symbol as the ID
@@ -332,11 +334,11 @@ def get_stock_overview():
 
     # Generate embedding
     data_text = json.dumps(data)  # Convert data to string
-    embedding = generate_embedding(data_text)
+    # embedding = generate_embedding(data_text)
 
     # Store in Chroma
     collection.add(
-        embeddings=[embedding],
+        # embeddings=[embedding],
         documents=[data_text],
         metadatas=[{'symbol': symbol}],
         ids=[f"{symbol}_overview"]
@@ -371,11 +373,11 @@ def get_income_statement():
 
     # Generate embedding
     data_text = json.dumps(data)  # Convert data to string
-    embedding = generate_embedding(data_text)
+    # embedding = generate_embedding(data_text)
 
     # Store in Chroma
     collection.add(
-        embeddings=[embedding],
+        # embeddings=[embedding],
         documents=[data_text],
         metadatas=[{'symbol': symbol}],
         ids=[f"{symbol}_income_statement"]
@@ -410,11 +412,11 @@ def get_stock_news():
 
     # Generate embedding
     data_text = json.dumps(data)  # Convert data to string
-    embedding = generate_embedding(data_text)
+    # embedding = generate_embedding(data_text)
 
     # Store in Chroma
     collection.add(
-        embeddings=[embedding],
+        # embeddings=[embedding],
         documents=[data_text],
         metadatas=[{'symbol': symbol}],
         ids=[f"{symbol}_news"]
@@ -449,11 +451,11 @@ def get_insider_transactions():
 
     # Generate embedding
     data_text = json.dumps(data)  # Convert data to string
-    embedding = generate_embedding(data_text)
+    # embedding = generate_embedding(data_text)
 
     # Store in Chroma
     collection.add(
-        embeddings=[embedding],
+        # embeddings=[embedding],
         documents=[data_text],
         metadatas=[{'symbol': symbol}],
         ids=[f"{symbol}_insider_transactions"]
@@ -464,26 +466,17 @@ def get_insider_transactions():
 
     return jsonify(data)
 
-@cache.cached()
-@app.route('/stocks/time_series', methods=['GET'])
-def get_stock_time_series():
+@app.route('/stocks/time_series_monthly', methods=['GET'])
+@cache.cached(timeout=300, query_string=True)  # Cache for 5 minutes
+def get_stock_time_series_monthly():
     symbol = request.args.get('symbol')
-    time_series_function = request.args.get('function', 'TIME_SERIES_DAILY')
-    outputsize = request.args.get('outputsize', 'compact')
-    datatype = request.args.get('datatype', 'json')
-
     if not symbol:
         return jsonify({'error': 'Please provide the stock symbol as a parameter.'}), 400
 
-    if time_series_function not in ['TIME_SERIES_DAILY', 'TIME_SERIES_WEEKLY', 'TIME_SERIES_MONTHLY']:
-        return jsonify({'error': 'Invalid time series function.'}), 400
-
     url = 'https://www.alphavantage.co/query'
     params = {
-        'function': time_series_function,
+        'function': 'TIME_SERIES_MONTHLY_ADJUSTED',
         'symbol': symbol.upper(),
-        'outputsize': outputsize,
-        'datatype': datatype,
         'apikey': API_KEY
     }
 
@@ -494,22 +487,92 @@ def get_stock_time_series():
 
     data = response.json()
 
-    # Generate embedding
-    data_text = json.dumps(data)
-    embedding = generate_embedding(data_text)
+    time_series_key = 'Monthly Adjusted Time Series'
+    if time_series_key not in data:
+        return jsonify({'error': 'No data found for the requested time series.'}), 400
 
-    # Store in Chroma
-    collection.add(
-        embeddings=[embedding],
-        documents=[data_text],
-        metadatas=[{'symbol': symbol, 'function': time_series_function, 'outputsize': outputsize}],
-        ids=[f"{symbol}_{time_series_function}_{outputsize}"]
-    )
+    time_series = data[time_series_key]
 
-    if 'Error Message' in data or 'Note' in data:
-        return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
+    # Transform the data into a usable format
+    processed_data = [
+        {
+            'time': date,
+            'open': float(values['1. open']),
+            'high': float(values['2. high']),
+            'low': float(values['3. low']),
+            'close': float(values['4. close']),
+            'adjusted_close': float(values['5. adjusted close']),
+            'volume': int(values['6. volume']),
+            'dividend_amount': float(values['7. dividend amount']),
+        }
+        for date, values in time_series.items()
+    ]
 
-    return jsonify(data)
+    # Sort by date ascending
+    processed_data.sort(key=lambda x: x['time'])
+
+    return jsonify({'symbol': symbol, 'data': processed_data})
+
+
+
+@app.route('/stocks/time_series', methods=['GET'])
+@cache.cached()
+def get_stock_time_series():
+    symbol = request.args.get('symbol')
+    time_series_function = request.args.get('function', 'TIME_SERIES_DAILY')
+
+    app.logger.debug(f"Received time_series_function: {time_series_function}")
+
+    if not symbol:
+        return jsonify({'error': 'Please provide the stock symbol as a parameter.'}), 400
+
+    if time_series_function not in ['TIME_SERIES_DAILY', 'TIME_SERIES_WEEKLY', 'TIME_SERIES_MONTHLY']:
+        return jsonify({'error': 'Invalid time series function: {time_series_function}'}), 400
+
+    url = 'https://www.alphavantage.co/query'
+    params = {
+        'function': time_series_function,
+        'symbol': symbol.upper(),
+        'apikey': API_KEY
+    }
+
+    response = requests.get(url, params=params)
+
+    if response.status_code != 200:
+        return jsonify({'error': 'Failed to fetch data from Alpha Vantage API.'}), 500
+
+    data = response.json()
+
+    # Extract relevant time-series data
+    time_series_key = {
+        'TIME_SERIES_DAILY': 'Time Series (Daily)',
+        'TIME_SERIES_WEEKLY': 'Weekly Time Series',
+        'TIME_SERIES_MONTHLY': 'Monthly Time Series'
+    }.get(time_series_function, 'Time Series (Daily)')
+
+    if time_series_key not in data:
+        return jsonify({'error': 'No data found for the requested time series.'}), 400
+
+    time_series = data[time_series_key]
+
+    # Transform the data into a usable format
+    processed_data = [
+        {
+            'time': date,
+            'open': float(values['1. open']),
+            'high': float(values['2. high']),
+            'low': float(values['3. low']),
+            'close': float(values['4. close']),
+            'volume': int(values['5. volume']),
+        }
+        for date, values in time_series.items()
+    ]
+
+    # Sort by date ascending
+    processed_data.sort(key=lambda x: x['time'])
+
+    return jsonify({'symbol': symbol, 'data': processed_data})
+
 
 @cache.cached()
 @app.route('/stocks/daily', methods=['GET'])
@@ -543,11 +606,11 @@ def get_stock_daily():
 
     # Generate embedding
     data_text = json.dumps(data)
-    embedding = generate_embedding(data_text)
+    # embedding = generate_embedding(data_text)
 
     # Store in Chroma
     collection.add(
-        embeddings=[embedding],
+        # embeddings=[embedding],
         documents=[data_text],
         metadatas=[{'symbol': symbol, 'outputsize': outputsize}],
         ids=[f"{symbol}_daily_{outputsize}"]
@@ -597,11 +660,11 @@ def get_top_movers():
 
         # Generate embedding
         data_text = json.dumps(combined_data)
-        embedding = generate_embedding(data_text)
+        # embedding = generate_embedding(data_text)
 
         # Store in ChromaDB (existing functionality)
         collection.add(
-            embeddings=[embedding],
+            # embeddings=[embedding],
             documents=[data_text],
             metadatas=[{'type': 'top_movers'}],
             ids=['top_movers']
@@ -641,11 +704,11 @@ def query_data():
         return jsonify({'error': 'Please provide a query in the request body.'}), 400
 
     # Generate embedding for the query
-    query_embedding = generate_embedding(query_text)
+    # query_embedding = generate_embedding(query_text)
 
     # Query the vector database
     results = collection.query(
-        query_embeddings=[query_embedding],
+        # query_embeddings=[query_embedding],
         n_results=5,  # Number of results to return
         include=['documents', 'metadatas']  # Include documents and metadata in the response
     )
