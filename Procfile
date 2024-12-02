@@ -1,1 +1,1 @@
-web: gunicorn main:ai-advisor
+web: gunicorn app:app
