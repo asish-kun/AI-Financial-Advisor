@@ -25,12 +25,12 @@ from config import settings
 def create_app():
     app = Flask(__name__)
     CORS(app, supports_credentials=True)
-    app.secret_key = os.urandom(24)
+    # app.secret_key = os.urandom(24)
 
     # Configure JWT
-    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'AI-Financial-Advisor-151124')  # Replace with a secure secret key
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-    jwt = JWTManager(app)
+    # app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'AI-Financial-Advisor-151124')  # Replace with a secure secret key
+    # app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+    # jwt = JWTManager(app)
 
     cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
     logging.basicConfig(level=logging.DEBUG)
