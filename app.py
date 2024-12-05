@@ -5,8 +5,8 @@ from flask_cors import CORS
 import logging
 # from sentence_transformers import SentenceTransformer
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
-import chromadb
-from chromadb.config import Settings
+# import chromadb
+# from chromadb.config import Settings
 import json
 import os
 import numpy as np
@@ -38,9 +38,9 @@ def create_app():
     # embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
     # Initialize the ChromaDB client with updated settings
-    chroma_settings = Settings(persist_directory="chroma_data")
-    client = chromadb.Client(chroma_settings)
-    collection = client.get_or_create_collection("stock_data")
+    # chroma_settings = Settings(persist_directory="chroma_data")
+    # client = chromadb.Client(chroma_settings)
+    # collection = client.get_or_create_collection("stock_data")
 
     # ------------ Hashing Passwords ------------
     # from werkzeug.security import generate_password_hash, check_password_hash
@@ -294,12 +294,12 @@ def create_app():
         # embedding = generate_embedding(data_text)
 
         # Store in Chroma
-        collection.add(
-            # embeddings=[embedding],
-            documents=[data_text],
-            metadatas=[{'symbol': symbol}],
-            ids=[symbol]  # Use the stock symbol as the ID
-        )
+        # collection.add(
+        #     # embeddings=[embedding],
+        #     documents=[data_text],
+        #     metadatas=[{'symbol': symbol}],
+        #     ids=[symbol]  # Use the stock symbol as the ID
+        # )
 
         if 'Error Message' in data or 'Note' in data:
             return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -333,12 +333,12 @@ def create_app():
         # embedding = generate_embedding(data_text)
 
         # Store in Chroma
-        collection.add(
-            # embeddings=[embedding],
-            documents=[data_text],
-            metadatas=[{'symbol': symbol}],
-            ids=[f"{symbol}_overview"]
-        )
+        # collection.add(
+        #     # embeddings=[embedding],
+        #     documents=[data_text],
+        #     metadatas=[{'symbol': symbol}],
+        #     ids=[f"{symbol}_overview"]
+        # )
 
         if 'Error Message' in data or 'Note' in data:
             return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -372,12 +372,12 @@ def create_app():
         # embedding = generate_embedding(data_text)
 
         # Store in Chroma
-        collection.add(
-            # embeddings=[embedding],
-            documents=[data_text],
-            metadatas=[{'symbol': symbol}],
-            ids=[f"{symbol}_income_statement"]
-        )
+        # collection.add(
+        #     # embeddings=[embedding],
+        #     documents=[data_text],
+        #     metadatas=[{'symbol': symbol}],
+        #     ids=[f"{symbol}_income_statement"]
+        # )
 
         if 'Error Message' in data or 'Note' in data:
             return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -411,12 +411,12 @@ def create_app():
         # embedding = generate_embedding(data_text)
 
         # Store in Chroma
-        collection.add(
-            # embeddings=[embedding],
-            documents=[data_text],
-            metadatas=[{'symbol': symbol}],
-            ids=[f"{symbol}_news"]
-        )
+        # collection.add(
+        #     # embeddings=[embedding],
+        #     documents=[data_text],
+        #     metadatas=[{'symbol': symbol}],
+        #     ids=[f"{symbol}_news"]
+        # )
 
         if 'Error Message' in data or 'Note' in data:
             return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -450,12 +450,12 @@ def create_app():
         # embedding = generate_embedding(data_text)
 
         # Store in Chroma
-        collection.add(
-            # embeddings=[embedding],
-            documents=[data_text],
-            metadatas=[{'symbol': symbol}],
-            ids=[f"{symbol}_insider_transactions"]
-        )
+        # collection.add(
+        #     # embeddings=[embedding],
+        #     documents=[data_text],
+        #     metadatas=[{'symbol': symbol}],
+        #     ids=[f"{symbol}_insider_transactions"]
+        # )
 
         if 'Error Message' in data or 'Note' in data:
             return jsonify({'error': data.get('Error Message') or data.get('Note', 'API call limit reached.')}), 400
@@ -602,12 +602,12 @@ def create_app():
         # embedding = generate_embedding(data_text)
 
         # Store in Chroma
-        collection.add(
-            # embeddings=[embedding],
-            documents=[data_text],
-            metadatas=[{'symbol': symbol, 'outputsize': outputsize}],
-            ids=[f"{symbol}_daily_{outputsize}"]
-        )
+        # collection.add(
+        #     # embeddings=[embedding],
+        #     documents=[data_text],
+        #     metadatas=[{'symbol': symbol, 'outputsize': outputsize}],
+        #     ids=[f"{symbol}_daily_{outputsize}"]
+        # )
 
         # Check for API errors in the response
         if 'Error Message' in data or 'Note' in data:
@@ -656,12 +656,12 @@ def create_app():
             # embedding = generate_embedding(data_text)
 
             # Store in ChromaDB (existing functionality)
-            collection.add(
-                # embeddings=[embedding],
-                documents=[data_text],
-                metadatas=[{'type': 'top_movers'}],
-                ids=['top_movers']
-            )
+            # collection.add(
+            #     # embeddings=[embedding],
+            #     documents=[data_text],
+            #     metadatas=[{'type': 'top_movers'}],
+            #     ids=['top_movers']
+            # )
 
             # Prepare the item to insert into Cosmos DB
             item = {
@@ -688,25 +688,25 @@ def create_app():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
 
-    @app.route('/query', methods=['POST'])
-    def query_data():
-        data = request.get_json()
-        query_text = data.get('query')
+    # @app.route('/query', methods=['POST'])
+    # def query_data():
+    #     data = request.get_json()
+    #     query_text = data.get('query')
 
-        if not query_text:
-            return jsonify({'error': 'Please provide a query in the request body.'}), 400
+    #     if not query_text:
+    #         return jsonify({'error': 'Please provide a query in the request body.'}), 400
 
-        # Generate embedding for the query
-        # query_embedding = generate_embedding(query_text)
+    #     # Generate embedding for the query
+    #     # query_embedding = generate_embedding(query_text)
 
-        # Query the vector database
-        results = collection.query(
-            # query_embeddings=[query_embedding],
-            n_results=5,  # Number of results to return
-            include=['documents', 'metadatas']  # Include documents and metadata in the response
-        )
+    #     # Query the vector database
+    #     # results = collection.query(
+    #     #     # query_embeddings=[query_embedding],
+    #     #     n_results=5,  # Number of results to return
+    #     #     include=['documents', 'metadatas']  # Include documents and metadata in the response
+    #     # )
 
-        return jsonify(results)
+    #     return jsonify(results)
 
     # -------------- ML Processing Routes --------------
 
