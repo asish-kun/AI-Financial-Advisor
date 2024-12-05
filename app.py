@@ -97,6 +97,11 @@ def create_app():
 
     # -------------- Auth Routes --------------
 
+    @app.route('/')
+    def home():
+        return jsonify({"message": "AI Financial Advisor backend is running!"})
+
+
     @app.route('/signup', methods=['POST'])
     def signup():
         data = request.get_json()
