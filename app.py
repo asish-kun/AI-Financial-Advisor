@@ -4,7 +4,7 @@ from flask_caching import Cache
 from flask_cors import CORS
 import logging
 # from sentence_transformers import SentenceTransformer
-from flask_jwt_extended import create_access_token, jwt_required, JWTManager
+# from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 # import chromadb
 # from chromadb.config import Settings
 import json
@@ -152,10 +152,6 @@ def create_app():
         try:
             # Insert new user into Cosmos DB container
             container.create_item(body=new_user)
-            # Generate JWT token
-            access_token = create_access_token(identity=email)
-            response = jsonify({"message": "User signed up successfully"})
-            response.set_cookie('access_token', access_token, httponly=True)
             return jsonify({"message": "User signed up successfully"}), 201
         except exceptions.CosmosHttpResponseError as e:
             return jsonify({"message": "Error creating user", "error": str(e)}), 500
