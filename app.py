@@ -99,7 +99,13 @@ def create_app():
 
     @app.route('/')
     def home():
-        return jsonify({"message": "AI Financial Advisor backend is running!"})
+        return "<h1>AI Financial Advisor Backend</h1><p>The backend is running successfully.</p>"
+
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return "<h1>404 Not Found</h1><p>The requested resource could not be found.</p>", 404
+
 
 
     @app.route('/signup', methods=['POST'])
